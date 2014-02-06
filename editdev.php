@@ -191,7 +191,7 @@ $(function()
     {
       $( "#gpuclk_dro" ).val(ui.value );
       $( "#gpuclk_chk" ).each(function(){ this.checked = true; });
-    },
+    }
   });
   $( "#gpuclk_dro" ).val($( "#gpuclk_slider" ).slider( "value" ) );
   
@@ -204,7 +204,7 @@ $(function()
     {
       $( "#memclk_dro" ).val(ui.value );
       $( "#memclk_chk" ).each(function(){ this.checked = true; });
-    },
+    }
   });
   $( "#memclk_dro" ).val($( "#memclk_slider" ).slider( "value" ) );
   
@@ -217,7 +217,7 @@ $(function()
     {
       $( "#gpuvolt_dro" ).val(ui.value );
       $( "#gpuvolt_chk" ).each(function(){ this.checked = true; });
-    },
+    }
   });
   $( "#gpuvolt_dro" ).val($( "#gpuvolt_slider" ).slider( "value" ) );
   
@@ -230,7 +230,7 @@ $(function()
     {
       $( "#gpufan_dro" ).val(ui.value );
       $( "#gpufan_chk" ).each(function(){ this.checked = true; });
-    },
+    }
   });
   $( "#gpufan_dro" ).val($( "#gpufan_slider" ).slider( "value" ) );
   

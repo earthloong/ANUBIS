@@ -692,7 +692,7 @@ function get_host_summary($host_data)
 *****************************************************************************/
 function create_devs_header()
 {
-global $$Hash_Method;
+global $Hash_Method;
 //fallback header to SHA-256
 $header =
     "<thead>
