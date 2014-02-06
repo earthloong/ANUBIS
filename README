@@ -10,7 +10,7 @@ directory.
 Anubis uses the PDO API to connect to databases, so this feature must be enabled
 in your PHP setup. Consult
 http://php.net/manual/en/book.pdo.php
-on how to do this.
+on how to do this. You will also need to enable the sockets extension for PHP.
 
 Edit config.inc.php with the details of your database.
 These are the variables:

@@ -223,7 +223,11 @@ function get_host_status($host_data)
     if ($version_arr['STATUS'][0]['STATUS'] == 'S')
     {
       $API_version = $version_arr['VERSION'][0]['API'];
-      $CGM_version = $version_arr['VERSION'][0]['CGMiner'];
+      if(isset($version_arr['VERSION'][0]['CGMiner'])){
+        $CGM_version = $version_arr['VERSION'][0]['CGMiner'];
+      }elseif($version_arr['VERSION'][0]['SGMiner']){
+        $CGM_version = $version_arr['VERSION'][0]['SGMiner'];
+      }
     }
   }
   
@@ -484,6 +488,10 @@ function process_host_info($host_data)
   $up_time -= $hours * 3600;
   $mins = (int) floor($up_time / 60);
   $seconds = (int) $up_time - ($mins * 60);
+
+  $pga_count = isset($config_arr['CONFIG']['0']['PGA Count'])? $config_arr['CONFIG']['0']['PGA Count'] : 0;
+  $asc_count = isset($config_arr['CONFIG']['0']['ASC Count'])? $config_arr['CONFIG']['0']['ASC Count'] : 0;
+  $hot_count = isset($config_arr['CONFIG']['0']['Hotplug'])? $config_arr['CONFIG']['0']['Hotplug'] : 0;
   
   $output = "
       <tr>
@@ -503,7 +511,7 @@ function process_host_info($host_data)
         <td>".$CGM_version."<BR>".$Hash_Method."</td>
         <td>".$API_version."</td>
         <td>".$days."d ".$hours."h ".$mins."m ".$seconds."s</td>
-        <td>".$config_arr['CONFIG']['0']['GPU Count']." GPUs, ".$config_arr['CONFIG']['0']['PGA Count']." FPGAs, ".$config_arr['CONFIG']['0']['ASC Count']." ASCs<BR>Hotplug: ".$config_arr['CONFIG']['0']['Hotplug']."</td>
+        <td>".$config_arr['CONFIG']['0']['GPU Count']." GPUs, ".$pga_count." FPGAs, ".$asc_count." ASCs<BR>Hotplug: ".$hot_count."</td>
         <td>".$config_arr['CONFIG']['0']['ADL in use']."</td>
         <td>".$config_arr['CONFIG']['0']['Pool Count']." pools<BR>Using ".$config_arr['CONFIG']['0']['Strategy']."</td>
         <td>".$config_arr['CONFIG']['0']['Device Code']."</td>
@@ -566,7 +574,7 @@ function process_host_disp($desmhash, $summary_data_array, $dev_data_array)
     $getworks =    $summary_data_array['SUMMARY'][0]['Getworks'];
     $Diff1Accept = $summary_data_array['SUMMARY'][0]['Difficulty Accepted'];
 
-    if (isset($accepted) && $accepted !== 0)
+    if (isset($accepted) && $accepted != 0)
     {
       $difficulty = (int) ($Diff1Accept/$accepted);
       
@@ -586,10 +594,7 @@ function process_host_disp($desmhash, $summary_data_array, $dev_data_array)
     if ($desmhash > 0)
     {
       // Desired Mhash vs. 5s mhash
-      if ($Hash_Method == 'scrypt')
-        $fivesmhashper = round(100 / $desmhash * $fivesmhash*1000, 1);
-      else
-        $fivesmhashper = (int) round(100 / $desmhash * $fivesmhash, 1);
+      $fivesmhashper = (int) round(100 / $desmhash * $fivesmhash, 1);
 
       $fivesmhashcol = set_color_low($fivesmhashper, $config->yellowgessper, $config->maxgessper);
 
@@ -648,6 +653,7 @@ function process_host_disp($desmhash, $summary_data_array, $dev_data_array)
 *****************************************************************************/
 function get_host_summary($host_data)
 {
+  global $Hash_Method;
   $hostid = $host_data['id'];
   $name = $host_data['name'];
   $host = $host_data['address'];
@@ -662,6 +668,14 @@ function get_host_summary($host_data)
   {
     $arr = array ('command'=>'devs','parameter'=>'');
     $dev_arr = send_request_to_host($arr, $host_data);
+
+      // Also get coin type
+      $arr = array ('command'=>'coin','parameter'=>'');
+      $coin_arr = send_request_to_host($arr, $host_data);
+
+      if ($coin_arr)
+          if ($coin_arr['STATUS'][0]['STATUS'] == 'S')
+              $Hash_Method = $coin_arr['COIN'][0]['Hash Method'];
 
     $host_row = process_host_disp($desmhash, $summary_arr,  $dev_arr);
   }
@@ -1007,12 +1021,10 @@ function process_pool_disp($pool_data_array, $edit=false)
     $difficulty = (int) $pool_data_array['Last Share Difficulty'];
     
     $rejects = $pool_data_array['Pool Rejected%'] . " %";
-    $discards = round(100 /  $accepted *  $discarded, 1) . " %";
+    $discards = round(100 /  $getworks *  $discarded, 1) . " %";
     $stales = $pool_data_array['Pool Stale%'] . " %";
-    $getfails = round(100 /  $accepted *  $getfail, 1) . " %";
-    $remfails = round(100 /  $accepted *  $remfail, 1) . " %";
-
-    $Diff1Accept = $Diff1Accept;
+    $getfails = round(100 /  $getworks *  $getfail, 1) . " %";
+    $remfails = round(100 /  $getworks *  $remfail, 1) . " %";
     
     $rejectscol = set_color_high($rejects, $config->yellowrejects, $config->maxrejects);      // Rejects
     $discardscol = set_color_high($discards, $config->yellowdiscards, $config->maxdiscards);  // Discards
@@ -1050,7 +1062,7 @@ function process_pool_disp($pool_data_array, $edit=false)
 
   /*Set in-use colour */
   $poolcol = "";
-  if ($pools_in_use[$pool_data_array['POOL']] == true)
+  if (isset($pools_in_use[$pool_data_array['POOL']]))
     $poolcol = "class=green";
 
 
@@ -1061,7 +1073,7 @@ function process_pool_disp($pool_data_array, $edit=false)
   <td $alcol>".$start_stop_button ."</td>
   <td>".$getworks."</td>
   <td>".$accepted."</td>
-  <td>$difficulty</td>
+  <td>".(isset($difficulty) ? $difficulty : '')."</td>
   <td $rejectscol>".$rejected."<BR>".$rejects."</td>
   <td $discardscol>".$discarded."<BR>".$discards."</td>
   <td $stalescol>".$stale."<BR>".$stales."</td>
@@ -1408,7 +1420,7 @@ function process_debug_info($host_data)
   	 
   	foreach ($debug_param_arr as $param)
   	{
-  		if ($debug_arr['DEBUG']['0'][$param])
+  		if (isset($debug_arr['DEBUG']['0'][$param]))
   			$checked = 'checked';
   		else
   			$checked = '';
