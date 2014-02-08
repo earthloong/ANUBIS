@@ -49,6 +49,7 @@ $host_rejected = array();
 while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
     $hid = $host_data['host_id'];
     if(!isset($host_hash[$hid])){
+        //Host not seen on previous iterations
         $host_hash[$hid] = emptyBins();
         $host_accepted[$hid] = emptyBins();
         $host_rejected[$hid] = emptyBins();
@@ -81,6 +82,15 @@ $chart_global_shares = new LineChart(570);
 $dataSet_global_hashrate = new XYDataSet();
 $dataSet_global_accepted = new XYDataSet();
 $dataSet_global_rejected = new XYDataSet();
+$host_ids = array_keys($host_hash);
+foreach($host_ids as $hid){
+    $chart_perhost_hashes[$hid] = new LineChart(570);
+    $data_perhost_hashes[$hid] = new XYDataSet();
+
+    $chart_perhost_shares[$hid] = new LineChart(570);
+    $data_perhost_accepted[$hid] = new XYDataSet();
+    $data_perhost_rejected[$hid] = new XYDataSet();
+}
 
 for($i = 0; $i < 288; $i++){
     $label = '';
@@ -90,10 +100,15 @@ for($i = 0; $i < 288; $i++){
     $dataSet_global_hashrate->addPoint(new Point($label, $hashRateData[$i]));
     $dataSet_global_accepted->addPoint(new Point($label, $acceptanceRate[$i]));
     $dataSet_global_rejected->addPoint(new Point($label, $rejectedRate[$i]));
+    foreach($host_ids as $hid){
+        $data_perhost_hashes[$hid]->addPoint(new Point($label, $host_hash[$hid][$i]));
+        $data_perhost_accepted[$hid]->addPoint(new Point($label, $host_accepted[$hid][$i]));
+        $data_perhost_rejected[$hid]->addPoint(new Point($label, $host_rejected[$hid][$i]));
+    }
 }
 
 $chart_global_hashrate->setDataSet($dataSet_global_hashrate);
-$chart_global_hashrate->setTitle('KH/s average 5 min');
+$chart_global_hashrate->setTitle('KH/s 5 min average, all hosts');
 $chart_global_hashrate->render($path.'charts/global_hash.png');
 
 $chart_global_shares->getPlot()->getPalette()->setLineColor(array(
@@ -104,5 +119,22 @@ $dataSeries_global_shares = new XYSeriesDataSet();
 $dataSeries_global_shares->addSerie("Accepted", $dataSet_global_accepted);
 $dataSeries_global_shares->addSerie("Rejected", $dataSet_global_rejected);
 $chart_global_shares->setDataSet($dataSeries_global_shares);
-$chart_global_shares->setTitle('Shares/min avarage 5 min');
+$chart_global_shares->setTitle('Shares/min, all hosts');
 $chart_global_shares->render($path.'charts/global_shares.png');
+
+foreach($host_ids as $hid){
+    $chart_perhost_hashes[$hid]->setDataSet( $data_perhost_hashes[$hid]);
+    $chart_perhost_hashes[$hid]->setTitle('KH/s 5 min average, single host');
+    $chart_perhost_hashes[$hid]->render($path.'charts/host_'.$hid.'_hash.png');
+
+    $chart_perhost_shares[$hid]->getPlot()->getPalette()->setLineColor(array(
+        new Color(0, 255, 0),
+        new Color(255, 0, 0)
+    ));
+    $dataSeries_host_shares = new XYSeriesDataSet();
+    $dataSeries_host_shares->addSerie("Accepted",  $data_perhost_accepted[$hid]);
+    $dataSeries_host_shares->addSerie("Rejected", $data_perhost_rejected[$hid]);
+    $chart_perhost_shares[$hid]->setDataSet($dataSeries_global_shares);
+    $chart_perhost_shares[$hid]->setTitle('Shares/min, single host');
+    $chart_perhost_shares[$hid]->render($path.'charts/host_'.$hid.'_shares.png');
+}
