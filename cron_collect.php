@@ -33,10 +33,10 @@ if (!isset($gothoststbl))
     include("hoststbl.sql.php");
 
 if(!isset($gotdevstatstbl))
-    //Do include
+    include("hoststatstbl.sql.php");
 
 if(!isset($gothoststatstbl))
-    //Do include
+    include("devstatstbl.sql.php");
 
 $config = get_config_data();
 
