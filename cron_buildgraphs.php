@@ -10,6 +10,8 @@ require("config.inc.php");
 require("func.inc.php");
 require "libchart/classes/libchart.php";
 
+$path = dirname(__FILE__) . '/';
+
 $dbh = anubis_db_connect();
 
 $config = get_config_data();
@@ -83,8 +85,8 @@ $dataSet_global_rejected = new XYDataSet();
 
 for($i = 0; $i < 288; $i++){
     $label = '';
-    if($i % 24 == 0){
-        $label = date("H:i", $start + $i * 5 * 60);
+    if(($i+1) % 24 == 0){
+        $label = date("H:i", $start + ($i+1) * 5 * 60);
     }
     $dataSet_global_hashrate->addPoint(new Point($label, $hashRateData[$i]));
     $dataSet_global_accepted->addPoint(new Point($label, $acceptanceRate[$i]));
@@ -93,7 +95,7 @@ for($i = 0; $i < 288; $i++){
 
 $chart_global_hashrate->setDataSet($dataSet_global_hashrate);
 $chart_global_hashrate->setTitle('KH/s average 5 min');
-$chart_global_hashrate->render('charts/global_hash.png');
+$chart_global_hashrate->render($path.'charts/global_hash.png');
 
 $chart_global_shares->getPlot()->getPalette()->setLineColor(array(
     new Color(0, 255, 0),
@@ -104,4 +106,4 @@ $dataSeries_global_shares->addSerie("Accepted", $dataSet_global_accepted);
 $dataSeries_global_shares->addSerie("Rejected", $dataSet_global_rejected);
 $chart_global_shares->setDataSet($dataSeries_global_shares);
 $chart_global_shares->setTitle('Shares/min avarage 5 min');
-$chart_global_shares->render('charts/global_shares.png');
+$chart_global_shares->render($path.'charts/global_shares.png');
