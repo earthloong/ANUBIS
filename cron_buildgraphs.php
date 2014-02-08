@@ -46,15 +46,14 @@ $host_hash = array();
 $host_accepted = array();
 $host_rejected = array();
 
-$acc_prev = 0;
-$rej_prev = 0;
-
 while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
     $hid = $host_data['host_id'];
     if(!isset($host_hash[$hid])){
         $host_hash[$hid] = emptyBins();
         $host_accepted[$hid] = emptyBins();
         $host_rejected[$hid] = emptyBins();
+        $acc_prev[$hid] = 0;
+        $rej_prev[$hid] = 0;
     }
     $time = strtotime($host_data['stamp']);
     $bin = timeToBin($time, $binSize);
@@ -62,14 +61,14 @@ while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
     $host_hash[$hid][$bin] += $host_data['h_5s'] / $binSize;
     $acc = $host_data['accepted'];
     $rej = $host_data['rejected'];
-    if($acc_prev < $acc && $acc_prev != 0){
-        $accD = $acc - $acc_prev;
+    if($acc_prev[$hid] < $acc && $acc_prev[$hid] != 0){
+        $accD = $acc - $acc_prev[$hid];
     }else $accD = 0;
-    if($rej_prev < $rej && $rej_prev != 0){
-        $rejD = $rej - $rej_prev;
+    if($rej_prev[$hid] < $rej && $rej_prev[$hid] != 0){
+        $rejD = $rej - $rej_prev[$hid];
     } else $rejD = 0;
-    $rej_prev = $rej;
-    $acc_prev = $acc;
+    $rej_prev[$hid] = $rej;
+    $acc_prev[$hid] = $acc;
     $acceptanceRate[$bin] += $accD / $binSize;
     $rejectedRate[$bin] += $rejD / $binSize;
     $host_accepted[$hid][$bin] += $accD / $binSize;
