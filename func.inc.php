@@ -371,18 +371,16 @@ function set_share_colour($shares_array)
 *****************************************************************************/
 function create_host_header()
 {
-  global $Hash_Method;
-//fallback header to SHA-256
   $header =
 	"<thead>
 		<tr>
 			<th scope='col' class='rounded-company'>Address</th>
 			<th scope='col' class='rounded-q1'>Devs</th>
 			<th scope='col' class='rounded-q1'>Temp max</th>
-			<th scope='col' class='rounded-q1'>MH/s des</th>
+			<th scope='col' class='rounded-q1'>H/s des</th>
 			<th scope='col' class='rounded-q1'>Util</th>
-			<th scope='col' class='rounded-q1'>MH/s 5s</th>
-			<th scope='col' class='rounded-q1'>MH/s avg</th>
+			<th scope='col' class='rounded-q1'>H/s 5s</th>
+			<th scope='col' class='rounded-q1'>H/s avg</th>
 			<th scope='col' class='rounded-q1'>Gets</th>
 			<th scope='col' class='rounded-q1'>Accepted</th>
 			<th scope='col' class='rounded-q1'>Diff</th>
@@ -393,28 +391,7 @@ function create_host_header()
 			<th scope='col' class='rounded-q1'>Rem Fails</th>
 		</tr>
 	  </thead>";
- if ($Hash_Method =='scrypt') 
- {
-	  $header =
-		"<thead>
-				<th scope='col' class='rounded-company'>Address</th>
-				<th scope='col' class='rounded-q1'>Devs</th>
-				<th scope='col' class='rounded-q1'>Temp max</th>
-				<th scope='col' class='rounded-q1'>KH/s des</th>
-				<th scope='col' class='rounded-q1'>Util</th>
-				<th scope='col' class='rounded-q1'>KH/s 5s</th>
-				<th scope='col' class='rounded-q1'>KH/s avg</th>
-				<th scope='col' class='rounded-q1'>Gets</th>
-				<th scope='col' class='rounded-q1'>Accepted</th>
-				<th scope='col' class='rounded-q1'>Diff</th>
-				<th scope='col' class='rounded-q1'>Rej</th>
-				<th scope='col' class='rounded-q1'>Disc</th>
-				<th scope='col' class='rounded-q1'>Stales</th>
-				<th scope='col' class='rounded-q1'>Get Fails</th>
-				<th scope='col' class='rounded-q1'>Rem Fails</th>
-			</tr>
-		  </thead>";
-		}
+
     return $header;
 }
 
@@ -556,11 +533,13 @@ function process_host_disp($desmhash, $summary_data_array, $dev_data_array)
     {
       $avgmhash =   $summary_data_array['SUMMARY'][0]['MHS av']*1000;
       $fivesmhash =  $summary_data_array['SUMMARY'][0]['MHS 5s']*1000;
+      $prefix = 'k';
     }
     else
     {
       $avgmhash =   $summary_data_array['SUMMARY'][0]['MHS av'];
       $fivesmhash =  $summary_data_array['SUMMARY'][0]['MHS 5s'];
+      $prefix = 'M';
     }
 
     $accepted =    $summary_data_array['SUMMARY'][0]['Accepted'];
@@ -589,6 +568,8 @@ function process_host_disp($desmhash, $summary_data_array, $dev_data_array)
       $stalescol = set_color_high($stales, $config->yellowstales, $config->maxstales);         // Stales
       $getfailscol = set_color_high($getfails, $config->yellowgetfails, $config->maxgetfails); // Get fails
       $remfailscol = set_color_high($remfails, $config->yellowremfails, $config->maxremfails); // Rem fails
+    }else{
+        $difficulty = '';
     }
 
     if ($desmhash > 0)
@@ -609,10 +590,10 @@ function process_host_disp($desmhash, $summary_data_array, $dev_data_array)
 	$row = "
       <td $thisdevcol>$activedevs/$devs</td>
       <td $tempcol>$max_temp</td>
-      <td>$desmhash</td>
+      <td>$desmhash$prefix</td>
       <td>$utility<br>($Wutility)</td>
-      <td $fivesmhashcol>$fivesmhash<BR>$fivesmhashper %</td>
-      <td $avgmhpercol>$avgmhash<BR>$avgmhper %</td>
+      <td $fivesmhashcol>$fivesmhash$prefix<BR>$fivesmhashper %</td>
+      <td $avgmhpercol>$avgmhash$prefix<BR>$avgmhper %</td>
       <td>$getworks</td>
       <td>$accepted</td>
       <td>$difficulty</td>
