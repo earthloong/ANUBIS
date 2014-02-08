@@ -16,6 +16,8 @@ $config = get_config_data();
 
 $host_data_sql = "SELECT * FROM host_stats WHERE stamp > date_sub(now(), interval 1 day)";
 
+$binSize = 5;
+
 $result = $dbh->query($host_data_sql);
 
 $now = time();
@@ -26,37 +28,54 @@ function timeToBin($time, $binSize = 5){
     return (int) floor(($time - $start)/(60 * $binSize));
 }
 
-$hashRateData = array();
-$acceptanceRate = array();
-$rejectedRate = array();
-
-for($i = 0; $i < 288; $i++){
-    $acceptanceRate[$i] = $rejectedRate[$i] =  $hashRateData[$i] = 0;
+function emptyBins(){
+    $res = array();
+    for($i = 0; $i < 288; $i++){
+        $res[$i] = 0;
+    }
+    return $res;
 }
+
+$acceptanceRate = emptyBins();
+$rejectedRate = emptyBins();
+$hashRateData = emptyBins();
+
+$host_hash = array();
+$host_accepted = array();
+$host_rejected = array();
 
 $acc_prev = 0;
 $rej_prev = 0;
 
 while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
+    $hid = $host_data['host_id'];
+    if(!isset($host_hash[$hid])){
+        $host_hash[$hid] = emptyBins();
+        $host_accepted[$hid] = emptyBins();
+        $host_rejected[$hid] = emptyBins();
+    }
     $time = strtotime($host_data['stamp']);
-    $bin = timeToBin($time);
-    $hashRateData[$bin] += $host_data['h_5s'] / 5;
+    $bin = timeToBin($time, $binSize);
+    $hashRateData[$bin] += $host_data['h_5s'] / $binSize;
+    $host_hash[$hid][$bin] += $host_data['h_5s'] / $binSize;
     $acc = $host_data['accepted'];
     $rej = $host_data['rejected'];
-    if($acc_prev > 0){
+    if($acc_prev < $acc && $acc_prev != 0){
         $accD = $acc - $acc_prev;
     }else $accD = 0;
-    if($rej_prev > 0){
+    if($rej_prev < $rej && $rej_prev != 0){
         $rejD = $rej - $rej_prev;
     } else $rejD = 0;
     $rej_prev = $rej;
     $acc_prev = $acc;
-    $acceptanceRate[$bin] += $accD / 5;
-    $rejectedRate[$bin] += $rejD / 5;
+    $acceptanceRate[$bin] += $accD / $binSize;
+    $rejectedRate[$bin] += $rejD / $binSize;
+    $host_accepted[$hid][$bin] += $accD / $binSize;
+    $host_rejected[$hid][$bin] +=  $rejD / $binSize;
 }
 
-$chart_global_hashrate = new LineChart();
-$chart_global_shares = new LineChart();
+$chart_global_hashrate = new LineChart(570);
+$chart_global_shares = new LineChart(570);
 
 $dataSet_global_hashrate = new XYDataSet();
 $dataSet_global_accepted = new XYDataSet();
