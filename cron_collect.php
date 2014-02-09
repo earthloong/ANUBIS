@@ -6,6 +6,12 @@
  * Time: 14:43
  */
 
+
+// Usage:
+// Add this script to crontab (or another scheduler) to run every minute
+// Example for crontab:
+// * * * * * /usr/bin/php /srv/www/htdocs/anubis/cron_collect.php
+
 require("config.inc.php");
 require("func.inc.php");
 
