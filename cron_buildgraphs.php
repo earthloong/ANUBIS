@@ -26,6 +26,24 @@ $binSize = 5;
 $now = time();
 $start = $now - 24 * 60 * 60;
 
+class Bin{
+    var $total = 0;
+    var $count = 0;
+
+    function add($value){
+        $this->total += $value;
+        $this->count += 1;
+    }
+
+    function get(){
+        if($this->count != 0){
+            return $this->total / $this->count;
+        }else{
+            return 0;
+        }
+    }
+}
+
 function timeToBin($time, $binSize = 5){
     global $start;
     return (int) floor(($time - $start)/(60 * $binSize));
@@ -34,7 +52,7 @@ function timeToBin($time, $binSize = 5){
 function emptyBins(){
     $res = array();
     for($i = 0; $i < 288; $i++){
-        $res[$i] = 0;
+        $res[$i] = new Bin();
     }
     return $res;
 }
@@ -63,8 +81,8 @@ while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
     }
     $time = strtotime($host_data['stamp']);
     $bin = timeToBin($time, $binSize);
-    $hashRateData[$bin] += $host_data['h_5s'] / $binSize;
-    $host_hash[$hid][$bin] += $host_data['h_5s'] / $binSize;
+    $hashRateData[$bin]->add($host_data['h_5s']);
+    $host_hash[$hid][$bin]->add($host_data['h_5s']);
     $acc = $host_data['accepted'];
     $rej = $host_data['rejected'];
     if($acc_prev[$hid] < $acc && $acc_prev[$hid] != 0){
@@ -75,10 +93,10 @@ while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
     } else $rejD = 0;
     $rej_prev[$hid] = $rej;
     $acc_prev[$hid] = $acc;
-    $acceptanceRate[$bin] += $accD / $binSize;
-    $rejectedRate[$bin] += $rejD / $binSize;
-    $host_accepted[$hid][$bin] += $accD / $binSize;
-    $host_rejected[$hid][$bin] +=  $rejD / $binSize;
+    $acceptanceRate[$bin]->add($accD);
+    $rejectedRate[$bin]->add($rejD);
+    $host_accepted[$hid][$bin]->add($accD);
+    $host_rejected[$hid][$bin]->add($rejD);
 }
 
 $chart_global_hashrate = new LineChart(570);
@@ -102,13 +120,13 @@ for($i = 0; $i < 288; $i++){
     if(($i+1) % 24 == 0){
         $label = date("H:i", $start + ($i+1) * 5 * 60);
     }
-    $dataSet_global_hashrate->addPoint(new Point($label, $hashRateData[$i]));
-    $dataSet_global_accepted->addPoint(new Point($label, $acceptanceRate[$i]));
-    $dataSet_global_rejected->addPoint(new Point($label, $rejectedRate[$i]));
+    $dataSet_global_hashrate->addPoint(new Point($label, $hashRateData[$i]->get()));
+    $dataSet_global_accepted->addPoint(new Point($label, $acceptanceRate[$i]->get()));
+    $dataSet_global_rejected->addPoint(new Point($label, $rejectedRate[$i]->get()));
     foreach($host_ids as $hid){
-        $data_perhost_hashes[$hid]->addPoint(new Point($label, $host_hash[$hid][$i]));
-        $data_perhost_accepted[$hid]->addPoint(new Point($label, $host_accepted[$hid][$i]));
-        $data_perhost_rejected[$hid]->addPoint(new Point($label, $host_rejected[$hid][$i]));
+        $data_perhost_hashes[$hid]->addPoint(new Point($label, $host_hash[$hid][$i]->get()));
+        $data_perhost_accepted[$hid]->addPoint(new Point($label, $host_accepted[$hid][$i]->get()));
+        $data_perhost_rejected[$hid]->addPoint(new Point($label, $host_rejected[$hid][$i]->get()));
     }
 }
 
@@ -186,12 +204,12 @@ while ($dev_data = $result->fetch(PDO::FETCH_ASSOC)){
     } else $hweD = 0;
     $prev_rej[$hid][$did] = $rej;
     $prev_acc[$hid][$did] = $acc;
-    $dev_graphs[$hid][$did]['accepted'][$bin] += $accD / $binSize;
-    $dev_graphs[$hid][$did]['rejected'][$bin] += $rejD / $binSize;
-    $dev_graphs[$hid][$did]['hw_err'][$bin] += $hweD / $binSize;
+    $dev_graphs[$hid][$did]['accepted'][$bin]->add($accD);
+    $dev_graphs[$hid][$did]['rejected'][$bin]->add($rejD);
+    $dev_graphs[$hid][$did]['hw_err'][$bin]->add($hweD);
 
-    $dev_graphs[$hid][$did]['temp'][$bin] += $dev_data['temp'] / $binSize;
-    $dev_graphs[$hid][$did]['h_5s'][$bin] += $dev_data['h_5s'] / $binSize;
+    $dev_graphs[$hid][$did]['temp'][$bin]->add($dev_data['temp']);
+    $dev_graphs[$hid][$did]['h_5s'][$bin]->add($dev_data['h_5s']);
 }
 
 $dev_chart = array('temp', 'accepted', 'rejected', 'hw_err', 'h_5s');
@@ -217,7 +235,7 @@ foreach($dev_graphs as $hid => $host){
         foreach($dev_chart as $chart){
             $dev_sets[$hid][$did][$chart] = new XYDataSet();
             foreach($dev_graphs[$hid][$did][$chart] as $bin => $value){
-                $dev_sets[$hid][$did][$chart]->addPoint(new Point($labels[$bin], $value));
+                $dev_sets[$hid][$did][$chart]->addPoint(new Point($labels[$bin], $value->get()));
             }
             if($chart == 'temp'){
                 $temp_global_series->addSerie($hid . ' - ' . $did, $dev_sets[$hid][$did][$chart]);
