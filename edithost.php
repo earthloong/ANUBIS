@@ -310,6 +310,17 @@ if ($host_data)
       echo "</thead>";
     }
     echo "</table>";
+
+    if(file_exists('charts/host_'.$id.'_hash.png')){
+        ?>
+        <div>
+            <img src="charts/host_<?=$id?>_hash.png" alt="Global hashrate">
+            <img src="charts/host_temp_<?=$id?>.png" alt="Global shares">
+            <img src="charts/host_sharestotal_<?=$id?>.png" alt="Global hashrate">
+            <img src="charts/host_hashes_<?=$id?>.png" alt="Global shares">
+        </div>
+    <?php
+    }
     
     if ((version_compare($API_version, 1.7, '>=')) && $privileged)
     {

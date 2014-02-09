@@ -304,6 +304,16 @@ if ($host_data)
     echo "</table>";
     echo "</form>";
   }
+    if(file_exists('charts/dev_hash_'.$id.'_'.$type . $dev.'.png')){
+        ?>
+        <div>
+            <img src="charts/dev_hash_<?=$id?>_<?=$type?><?=$dev?>.png" alt="Global hashrate">
+            <img src="charts/dev_temp_<?=$id?>_<?=$type?><?=$dev?>.png" alt="Global shares">
+            <img src="charts/dev_shares_<?=$id?>_<?=$type?><?=$dev?>.png" alt="Global hashrate">
+        </div>
+
+    <?php
+    }
   
   if ($privileged && ($type == 'GPU'))
   {

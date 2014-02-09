@@ -108,7 +108,8 @@ else
         <?php if(file_exists('charts/global_hash.png')&&file_exists('charts/global_temp.png')){ ?>
             <div>
                 <img src="charts/global_hash.png" alt="Global hashrate">
-                <img src="charts/global_temp.png" alt="Global shares">
+                <img src="charts/global_temp.png" alt="Global temperature">
+
             </div>
         <?php } ?>
         <div class="cleaner"></div>
