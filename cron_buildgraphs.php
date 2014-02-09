@@ -27,17 +27,28 @@ $now = time();
 $start = $now - 24 * 60 * 60;
 
 class Bin{
-    var $total = 0;
-    var $count = 0;
+    var $total = array();
+    var $count = array();
 
-    function add($value){
-        $this->total += $value;
-        $this->count += 1;
+    //var $uniques = array();
+
+    function add($value, $uid = 1){
+        //$this->uniques[$uid] = 1;
+        if(!isset($this->total[$uid])){
+            $this->total[$uid] = 0;
+            $this->count[$uid] = 0;
+        }
+        $this->total[$uid] += $value;
+        $this->count[$uid] += 1;
     }
 
     function get(){
-        if($this->count != 0){
-            return $this->total / $this->count;
+        if(count($this->count) != 0){
+            $running = 0;
+            foreach($this->count as $k => $v){
+                $running += $this->total[$k] / $v;
+            }
+            return $running;
         }else{
             return 0;
         }
@@ -81,7 +92,7 @@ while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
     }
     $time = strtotime($host_data['stamp']);
     $bin = timeToBin($time, $binSize);
-    $hashRateData[$bin]->add($host_data['h_5s']);
+    $hashRateData[$bin]->add($host_data['h_5s'], $hid);
     $host_hash[$hid][$bin]->add($host_data['h_5s']);
     $acc = $host_data['accepted'];
     $rej = $host_data['rejected'];
@@ -242,12 +253,12 @@ foreach($dev_graphs as $hid => $host){
                 $g = new LineChart(570);
                 $g->setTitle('Temperature on '.$did);
                 $g->setDataSet($dev_sets[$hid][$did][$chart]);
-                $g->render($path.'/charts/dev_temp_'.$hid.'_'.$did.'.png');
+                $g->render($path.'charts/dev_temp_'.$hid.'_'.$did.'.png');
             }elseif($chart == 'h_5s'){
                 $g = new LineChart(570);
                 $g->setTitle('KH/s 5 min average on '.$did);
                 $g->setDataSet($dev_sets[$hid][$did][$chart]);
-                $g->render($path.'/charts/dev_hash_'.$hid.'_'.$did.'.png');
+                $g->render($path.'charts/dev_hash_'.$hid.'_'.$did.'.png');
             }
         }
         $shares_local_series = new XYSeriesDataSet();
@@ -262,7 +273,7 @@ foreach($dev_graphs as $hid => $host){
             new Color(255, 0, 0)
         ));
         $g->setDataSet($shares_local_series);
-        $g->render($path.'/charts/dev_shares_'.$hid.'_'.$did.'.png');
+        $g->render($path.'charts/dev_shares_'.$hid.'_'.$did.'.png');
 
         $host_temp_series->addSerie($did, $dev_sets[$hid][$did]['temp']);
         $host_hash_series->addSerie($did, $dev_sets[$hid][$did]['h_5s']);
@@ -271,15 +282,15 @@ foreach($dev_graphs as $hid => $host){
     $host_temp = new LineChart(570);
     $host_temp->setTitle('Temperatures on ' . $hid);
     $host_temp->setDataSet($host_temp_series);
-    $host_temp->render($path.'/charts/host_temp_'.$hid.'.png');
+    $host_temp->render($path.'charts/host_temp_'.$hid.'.png');
 
     $host_hash = new LineChart(570);
     $host_hash->setTitle('KH/s 5min average per device on '.$hid);
     $host_hash->setDataSet($host_hash_series);
-    $host_hash->render($path.'/charts/host_hashes_'.$hid.'.png');
+    $host_hash->render($path.'charts/host_hashes_'.$hid.'.png');
 
 }
 $global_temp = new LineChart(570);
 $global_temp->setTitle('Temperatures');
 $global_temp->setDataSet($temp_global_series);
-$global_temp->render($path.'/charts/global_temp.png');
+$global_temp->render($path.'charts/global_temp.png');
