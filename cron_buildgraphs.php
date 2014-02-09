@@ -17,6 +17,9 @@ require "libchart/classes/libchart.php";
 
 $path = dirname(__FILE__) . '/';
 
+//Prevent trouble with the other cron-script running at the same time
+sleep(10);
+
 $dbh = anubis_db_connect();
 
 $config = get_config_data();
