@@ -105,10 +105,10 @@ else
 
             <div class="cleaner"></div>
 		</div>
-        <?php if(file_exists('charts/global_hash.png')){ ?>
+        <?php if(file_exists('charts/global_hash.png')&&file_exists('charts/global_temp.png')){ ?>
             <div>
                 <img src="charts/global_hash.png" alt="Global hashrate">
-                <img src="charts/global_shares.png" alt="Global shares">
+                <img src="charts/global_temp.png" alt="Global shares">
             </div>
         <?php } ?>
         <div class="cleaner"></div>

@@ -261,7 +261,7 @@ foreach($dev_graphs as $hid => $host){
     $host_hash->render($path.'/charts/host_hashes_'.$hid.'.png');
 
 }
-$global_temp = new LineChart();
+$global_temp = new LineChart(570);
 $global_temp->setTitle('Temperatures');
 $global_temp->setDataSet($temp_global_series);
 $global_temp->render($path.'/charts/global_temp.png');
