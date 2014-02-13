@@ -63,9 +63,10 @@ function timeToBin($time, $binSize = 5){
     return (int) floor(($time - $start)/(60 * $binSize));
 }
 
-function emptyBins(){
+function emptyBins($double = false){
+    $count = ($double ? 2 : 1) * 288;
     $res = array();
-    for($i = 0; $i < 288; $i++){
+    for($i = 0; $i < $count; $i++){
         $res[$i] = new Bin();
     }
     return $res;
@@ -79,7 +80,7 @@ $host_hash = array();
 $host_accepted = array();
 $host_rejected = array();
 
-$host_data_sql = "SELECT * FROM host_stats WHERE stamp > date_sub(now(), interval 1 day)";
+$host_data_sql = "SELECT * FROM host_stats WHERE stamp > date_sub(now(), interval 2 day)";
 
 $result = $dbh->query($host_data_sql);
 
@@ -88,15 +89,17 @@ while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
     if(!isset($host_hash[$hid])){
         //Host not seen on previous iterations
         $host_hash[$hid] = emptyBins();
-        $host_accepted[$hid] = emptyBins();
-        $host_rejected[$hid] = emptyBins();
+        $host_accepted[$hid] = emptyBins(true);
+        $host_rejected[$hid] = emptyBins(true);
         $acc_prev[$hid] = 0;
         $rej_prev[$hid] = 0;
     }
     $time = strtotime($host_data['stamp']);
     $bin = timeToBin($time, $binSize);
-    $hashRateData[$bin]->add($host_data['h_5s'], $hid);
-    $host_hash[$hid][$bin]->add($host_data['h_5s']);
+    if($bin > 0){
+        $hashRateData[$bin]->add($host_data['h_5s'], $hid);
+        $host_hash[$hid][$bin]->add($host_data['h_5s']);
+    }
     $acc = $host_data['accepted'];
     $rej = $host_data['rejected'];
     if($acc_prev[$hid] < $acc && $acc_prev[$hid] != 0){
@@ -107,10 +110,12 @@ while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
     } else $rejD = 0;
     $rej_prev[$hid] = $rej;
     $acc_prev[$hid] = $acc;
-    $acceptanceRate[$bin]->add($accD);
-    $rejectedRate[$bin]->add($rejD);
-    $host_accepted[$hid][$bin]->add($accD);
-    $host_rejected[$hid][$bin]->add($rejD);
+    for($i = $bin + 288; $i < min(288, $bin + 576); $i++){
+        $acceptanceRate[$i]->add($accD);
+        $rejectedRate[$i]->add($rejD);
+        $host_accepted[$hid][$i]->add($accD);
+        $host_rejected[$hid][$i]->add($rejD);
+    }
 }
 
 $chart_global_hashrate = new LineChart(570);
@@ -135,12 +140,22 @@ for($i = 0; $i < 288; $i++){
         $label = date("H:i", $start + ($i+1) * 5 * 60);
     }
     $dataSet_global_hashrate->addPoint(new Point($label, $hashRateData[$i]->get()));
-    $dataSet_global_accepted->addPoint(new Point($label, $acceptanceRate[$i]->get()));
-    $dataSet_global_rejected->addPoint(new Point($label, $rejectedRate[$i]->get()));
+    $acc = $acceptanceRate[$i+288]->get();
+    $rej = $rejectedRate[$i+288]->get();
+    $tot = $acc+$rej;
+    $accPercent = $acc/$tot*100;
+    $rejPercent = $rej/$tot*100;
+    $dataSet_global_accepted->addPoint(new Point($label, $accPercent));
+    $dataSet_global_rejected->addPoint(new Point($label, $rejPercent));
     foreach($host_ids as $hid){
         $data_perhost_hashes[$hid]->addPoint(new Point($label, $host_hash[$hid][$i]->get()));
-        $data_perhost_accepted[$hid]->addPoint(new Point($label, $host_accepted[$hid][$i]->get()));
-        $data_perhost_rejected[$hid]->addPoint(new Point($label, $host_rejected[$hid][$i]->get()));
+        $acc = $host_accepted[$hid][$i+288]->get();
+        $rej = $host_rejected[$hid][$i+288]->get();
+        $tot = $acc+$rej;
+        $accPercent = $acc/$tot*100;
+        $rejPercent = $rej/$tot*100;
+        $data_perhost_accepted[$hid]->addPoint(new Point($label, $accPercent));
+        $data_perhost_rejected[$hid]->addPoint(new Point($label, $rejPercent));
     }
 }
 
@@ -150,7 +165,7 @@ $chart_global_hashrate->render($path.'charts/global_hash.png');
 
 $chart_global_shares->getPlot()->getPalette()->setLineColor(array(
     new Color(0, 255, 0),
-    new Color(255, 0, 0)
+    new Color(255, 255, 0)
 ));
 $dataSeries_global_shares = new XYSeriesDataSet();
 $dataSeries_global_shares->addSerie("Accepted", $dataSet_global_accepted);
@@ -176,7 +191,7 @@ foreach($host_ids as $hid){
     $chart_perhost_shares[$hid]->render($path.'charts/host_sharestotal_'.$hid.'.png');
 }
 
-$dev_data_sql = "SELECT * FROM dev_stats WHERE stamp > date_sub(now(), interval 1 day)";
+$dev_data_sql = "SELECT * FROM dev_stats WHERE stamp > date_sub(now(), interval 2 day)";
 
 $result = $dbh->query($dev_data_sql);
 
@@ -197,9 +212,9 @@ while ($dev_data = $result->fetch(PDO::FETCH_ASSOC)){
     if(!isset($dev_graphs[$hid])){
         $dev_graphs[$hid][$did]['temp'] = emptyBins();
         $dev_graphs[$hid][$did]['h_5s'] = emptyBins();
-        $dev_graphs[$hid][$did]['accepted'] = emptyBins();
-        $dev_graphs[$hid][$did]['rejected'] = emptyBins();
-        $dev_graphs[$hid][$did]['hw_err'] = emptyBins();
+        $dev_graphs[$hid][$did]['accepted'] = emptyBins(true);
+        $dev_graphs[$hid][$did]['rejected'] = emptyBins(true);
+        $dev_graphs[$hid][$did]['hw_err'] = emptyBins(true);
         $prev_acc[$hid][$did] = 0;
         $prev_rej[$hid][$did] = 0;
         $prev_hw[$hid][$did] = 0;
@@ -218,12 +233,15 @@ while ($dev_data = $result->fetch(PDO::FETCH_ASSOC)){
     } else $hweD = 0;
     $prev_rej[$hid][$did] = $rej;
     $prev_acc[$hid][$did] = $acc;
-    $dev_graphs[$hid][$did]['accepted'][$bin]->add($accD);
-    $dev_graphs[$hid][$did]['rejected'][$bin]->add($rejD);
-    $dev_graphs[$hid][$did]['hw_err'][$bin]->add($hweD);
-
-    $dev_graphs[$hid][$did]['temp'][$bin]->add($dev_data['temp']);
-    $dev_graphs[$hid][$did]['h_5s'][$bin]->add($dev_data['h_5s']);
+    for($i = $bin + 288; $i < min(288, $bin + 576); $i++){
+        $dev_graphs[$hid][$did]['accepted'][$i]->add($accD);
+        $dev_graphs[$hid][$did]['rejected'][$i]->add($rejD);
+        $dev_graphs[$hid][$did]['hw_err'][$i]->add($hweD);
+    }
+    if($bin >= 0){
+        $dev_graphs[$hid][$did]['temp'][$bin]->add($dev_data['temp']);
+        $dev_graphs[$hid][$did]['h_5s'][$bin]->add($dev_data['h_5s']);
+    }
 }
 
 $dev_chart = array('temp', 'accepted', 'rejected', 'hw_err', 'h_5s');
@@ -248,9 +266,13 @@ foreach($dev_graphs as $hid => $host){
     foreach($host as $did => $dev){
         foreach($dev_chart as $chart){
             $dev_sets[$hid][$did][$chart] = new XYDataSet();
-            foreach($dev_graphs[$hid][$did][$chart] as $bin => $value){
-                $dev_sets[$hid][$did][$chart]->addPoint(new Point($labels[$bin], $value->get()));
+            if(in_array($chart, array('accepted', 'rejected', 'hw_err'))){
+                continue;
             }
+            foreach($dev_graphs[$hid][$did][$chart] as $bin => $value){
+              $dev_sets[$hid][$did][$chart]->addPoint(new Point($labels[$bin], $value->get()));
+            }
+
             if($chart == 'temp'){
                 $temp_global_series->addSerie($hid . ' - ' . $did, $dev_sets[$hid][$did][$chart]);
                 $g = new LineChart(570);
@@ -263,6 +285,18 @@ foreach($dev_graphs as $hid => $host){
                 $g->setDataSet($dev_sets[$hid][$did][$chart]);
                 $g->render($path.'charts/dev_hash_'.$hid.'_'.$did.'.png');
             }
+        }
+        for($b = 288; $b < 596; $b++){
+            $acc = $dev_graphs[$hid][$did]['accepted'][$b];
+            $rej = $dev_graphs[$hid][$did]['rejected'][$b];
+            $hwe = $dev_graphs[$hid][$did]['hw_err'][$b];
+            $tot = $acc+$rej+$hwe;
+            $accPercent = $acc/$tot*100;
+            $rejPercent = $rej/$tot*100;
+            $hwePercent = $hwe/$tot*100;
+            $dev_sets[$hid][$did]['accepted']->addPoint(new Point($labels[$b-288], $accPercent));
+            $dev_sets[$hid][$did]['rejected']->addPoint(new Point($labels[$b-288], $rejPercent));
+            $dev_sets[$hid][$did]['hw_err']->addPoint(new Point($labels[$b-288], $hwePercent));
         }
         $shares_local_series = new XYSeriesDataSet();
         $shares_local_series->addSerie('Accepted', $dev_sets[$hid][$did]['accepted']);
