@@ -25,6 +25,7 @@ $dbh = anubis_db_connect();
 $config = get_config_data();
 
 $binSize = 5;
+$sharesSmoothing = 288;
 
 $now = time();
 $start = $now - 24 * 60 * 60;
@@ -110,7 +111,7 @@ while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
     } else $rejD = 0;
     $rej_prev[$hid] = $rej;
     $acc_prev[$hid] = $acc;
-    for($i = $bin + 288; $i < min(576, $bin + 576); $i++){
+    for($i = $bin + 288; $i < min(576, $bin + 288 + $sharesSmoothing); $i++){
         $acceptanceRate[$i]->add($accD);
         $rejectedRate[$i]->add($rejD);
         $host_accepted[$hid][$i]->add($accD);
@@ -243,7 +244,7 @@ while ($dev_data = $result->fetch(PDO::FETCH_ASSOC)){
     } else $hweD = 0;
     $prev_rej[$hid][$did] = $rej;
     $prev_acc[$hid][$did] = $acc;
-    for($i = $bin + 288; $i < min(576, $bin + 576); $i++){
+    for($i = $bin + 288; $i < min(576, $bin + 288 + $sharesSmoothing); $i++){
         $dev_graphs[$hid][$did]['accepted'][$i]->add($accD);
         $dev_graphs[$hid][$did]['rejected'][$i]->add($rejD);
         $dev_graphs[$hid][$did]['hw_err'][$i]->add($hweD);
