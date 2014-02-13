@@ -72,8 +72,8 @@ function emptyBins($double = false){
     return $res;
 }
 
-$acceptanceRate = emptyBins();
-$rejectedRate = emptyBins();
+$acceptanceRate = emptyBins(true);
+$rejectedRate = emptyBins(true);
 $hashRateData = emptyBins();
 
 $host_hash = array();
@@ -110,7 +110,7 @@ while ($host_data = $result->fetch(PDO::FETCH_ASSOC)){
     } else $rejD = 0;
     $rej_prev[$hid] = $rej;
     $acc_prev[$hid] = $acc;
-    for($i = $bin + 288; $i < min(288, $bin + 576); $i++){
+    for($i = $bin + 288; $i < min(576, $bin + 576); $i++){
         $acceptanceRate[$i]->add($accD);
         $rejectedRate[$i]->add($rejD);
         $host_accepted[$hid][$i]->add($accD);
@@ -143,8 +143,13 @@ for($i = 0; $i < 288; $i++){
     $acc = $acceptanceRate[$i+288]->get();
     $rej = $rejectedRate[$i+288]->get();
     $tot = $acc+$rej;
-    $accPercent = $acc/$tot*100;
-    $rejPercent = $rej/$tot*100;
+    if($tot>0){
+        $accPercent = $acc/$tot*100;
+        $rejPercent = $rej/$tot*100;
+    }else{
+        $accPercent = 100;
+        $rejPercent = 0;
+    }
     $dataSet_global_accepted->addPoint(new Point($label, $accPercent));
     $dataSet_global_rejected->addPoint(new Point($label, $rejPercent));
     foreach($host_ids as $hid){
@@ -152,8 +157,13 @@ for($i = 0; $i < 288; $i++){
         $acc = $host_accepted[$hid][$i+288]->get();
         $rej = $host_rejected[$hid][$i+288]->get();
         $tot = $acc+$rej;
-        $accPercent = $acc/$tot*100;
-        $rejPercent = $rej/$tot*100;
+        if($tot > 0){
+            $accPercent = $acc/$tot*100;
+            $rejPercent = $rej/$tot*100;
+        }else{
+            $accPercent = 100;
+            $rejPercent = 0;
+        }
         $data_perhost_accepted[$hid]->addPoint(new Point($label, $accPercent));
         $data_perhost_rejected[$hid]->addPoint(new Point($label, $rejPercent));
     }
@@ -233,7 +243,7 @@ while ($dev_data = $result->fetch(PDO::FETCH_ASSOC)){
     } else $hweD = 0;
     $prev_rej[$hid][$did] = $rej;
     $prev_acc[$hid][$did] = $acc;
-    for($i = $bin + 288; $i < min(288, $bin + 576); $i++){
+    for($i = $bin + 288; $i < min(576, $bin + 576); $i++){
         $dev_graphs[$hid][$did]['accepted'][$i]->add($accD);
         $dev_graphs[$hid][$did]['rejected'][$i]->add($rejD);
         $dev_graphs[$hid][$did]['hw_err'][$i]->add($hweD);
@@ -286,14 +296,20 @@ foreach($dev_graphs as $hid => $host){
                 $g->render($path.'charts/dev_hash_'.$hid.'_'.$did.'.png');
             }
         }
-        for($b = 288; $b < 596; $b++){
-            $acc = $dev_graphs[$hid][$did]['accepted'][$b];
-            $rej = $dev_graphs[$hid][$did]['rejected'][$b];
-            $hwe = $dev_graphs[$hid][$did]['hw_err'][$b];
+        for($b = 288; $b < 576; $b++){
+            $acc = $dev_graphs[$hid][$did]['accepted'][$b]->get();
+            $rej = $dev_graphs[$hid][$did]['rejected'][$b]->get();
+            $hwe = $dev_graphs[$hid][$did]['hw_err'][$b]->get();
             $tot = $acc+$rej+$hwe;
-            $accPercent = $acc/$tot*100;
-            $rejPercent = $rej/$tot*100;
-            $hwePercent = $hwe/$tot*100;
+            if($tot>0){
+                $accPercent = $acc/$tot*100;
+                $rejPercent = $rej/$tot*100;
+                $hwePercent = $hwe/$tot*100;
+            }else{
+                $accPercent = 100;
+                $rejPercent = 0;
+                $hwePercent = 0;
+            }
             $dev_sets[$hid][$did]['accepted']->addPoint(new Point($labels[$b-288], $accPercent));
             $dev_sets[$hid][$did]['rejected']->addPoint(new Point($labels[$b-288], $rejPercent));
             $dev_sets[$hid][$did]['hw_err']->addPoint(new Point($labels[$b-288], $hwePercent));
